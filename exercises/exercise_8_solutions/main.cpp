@@ -49,6 +49,10 @@ GLuint carLightTexture;
 GLuint carWindowsTexture;
 GLuint carWheelTexture;
 GLuint floorTexture;
+//??? - @phij
+//GLuint gAccum;
+unsigned int texture;
+//------------
 Camera camera(glm::vec3(0.0f, 1.6f, 5.0f));
 
 Shader* skyboxShader;
@@ -130,6 +134,10 @@ unsigned int initSkyboxBuffers();
 unsigned int loadCubemap(vector<std::string> faces);
 void createShadowMap();
 void setShadowUniforms();
+// == PHIJ ==
+void drawQuad();
+void loadTexture();
+// ==========
 
 int main()
 {
@@ -175,6 +183,7 @@ int main()
     pbr_shading = new Shader("shaders/common_shading.vert", "shaders/pbr_shading.frag");
     shader = pbr_shading;
 
+    /* == OMITTED FROM PROJECT ==
     carBodyModel = new Model("car/Body_LOD0.obj");
     carPaintModel = new Model("car/Paint_LOD0.obj");
     carInteriorModel = new Model("car/Interior_LOD0.obj");
@@ -182,7 +191,7 @@ int main()
     carWindowsModel = new Model("car/Windows_LOD0.obj");
     carWheelModel = new Model("car/Wheel_LOD0.obj");
     floorModel = new Model("floor/floor.obj");
-
+    */
     // init skybox
     vector<std::string> faces
     {
@@ -279,7 +288,7 @@ int main()
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-
+    /* == OMITTED FROM PROJECT ==
     delete carBodyModel;
     delete carPaintModel;
     delete carInteriorModel;
@@ -287,6 +296,7 @@ int main()
     delete carWindowsModel;
     delete carWheelModel;
     delete floorModel;
+    */
     delete phong_shading;
     delete pbr_shading;
     delete shadowMap_shader;
@@ -326,7 +336,7 @@ void drawGui(){
         ImGui::SliderFloat("light 2 radius", &config.lights[1].radius, 0.01f, 50.0f);
         ImGui::SliderFloat("light 2 speed", &lightRotationSpeed, 0.0f, 2.0f);
         ImGui::Separator();
-
+        /* == OMITTED FROM PROJECT 
         ImGui::Text("Car paint material: ");
         ImGui::ColorEdit3("color", (float*)&config.reflectionColor);
         ImGui::Separator();
@@ -338,6 +348,7 @@ void drawGui(){
         ImGui::SliderFloat("roughness", &config.roughness, 0.01f, 1.0f);
         ImGui::SliderFloat("metalness", &config.metalness, 0.0f, 1.0f);
         ImGui::Separator();
+        */
 
         ImGui::Text("Shading model: ");
         {
@@ -407,6 +418,74 @@ void resetForwardAdditionalPass()
     glDepthFunc(GL_LESS);
 }
 
+void loadTexture()
+{
+// taken directly from: https://learnopengl.com/Getting-started/Textures
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    // set the texture wrapping/filtering options (on the currently bound texture object)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // load and generate the texture
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load("leafTexture.jpg", &width, &height, &nrChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        std::cout << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
+}
+
+// PHIJ - Inspired from Excercise 9
+void drawQuad() 
+{
+    // Vertex Array/buffer Object identification init
+    static unsigned int quadVAO = 0, quadVBO;
+    if (quadVAO == 0) { // <-- this avoid memory leaks. Not sure why... presumably it is to ensure that the vertex arrays are only generated once, and kept in the buffer for future use.
+
+        // Setup positions and Texture Coordiantes (Packed as 3 verticies, and 2 texture coords. strips of 5)
+        float quadVerticies[] = {
+                //pos   pos   pos | txtC  txtC | norm norm norm |  tanget (3)
+                -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+                -1.0f,  1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+                1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+                1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+                
+
+
+        };
+
+        // Setup Plane Vertex Array Object
+        glGenVertexArrays(1, &quadVAO); // Generates a vertex array with an associated id
+        glGenBuffers(1, &quadVBO); // generates a buffer object with an associated ID
+        glBindVertexArray(quadVAO); // Binds Vertex Array, so we may work on it
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO); // Binds the buffer so we may work on it.
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVerticies), &quadVerticies, GL_STATIC_DRAW); // sets the verticies into the buffer object that is currently bound.
+        
+        // pbr/common_shading (vertex) attribute array pointers.
+        glEnableVertexAttribArray(0); // - vertex
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)0); // creates a pointer in memory to read data in the buffer. techiang it how to navigate inidvidual pieces.
+        glEnableVertexAttribArray(1); // - normal
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float) , (void*)(5 * sizeof(float))); // ?
+        glEnableVertexAttribArray(2); // - texture coords
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(3); // - tangent
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(7 * sizeof(float))); // ?
+    
+    }
+    // bind the vertex array... again?
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); // draw verticies in the vertex array as a triangle strip (memory effecient)
+    glBindVertexArray(0); // unbinds active VAO. presumably to avoid memory overflow.
+
+}
 
 
 // init the VAO of the skybox
@@ -623,7 +702,7 @@ void drawObjects()
     // the typical transformation uniforms are already set for you, these are:
     // projection (perspective projection matrix)
     // view (to map world space coordinates to the camera space, so the camera position becomes the origin)
-    // model (for each model part we draw)
+    // model (for each model part we draw) <-- @PHIJ -- omitted for this project --
 
     // camera parameters
     glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
@@ -640,6 +719,25 @@ void drawObjects()
     glActiveTexture(GL_TEXTURE5);
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
 
+    // @PHIJ -- Draw Quad --
+    shader = pbr_shading; // change the active shader program to PBR-Shader
+    shader->use(); // applies current shader.
+    shader->setMat4("model", glm::mat4(1)); // Sets the identity matrix to model (?)
+    shader->setMat4("viewProjection", viewProjection); // applies the view projection matrix.
+
+    loadTexture(); // loads the texture
+    glDisable(GL_DEPTH_TEST);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    drawQuad(); // draws the quad.
+
+    glEnable(GL_DEPTH_TEST);
+
+    // ======================
+
+
+    /* --- CAR MODEL IMPORT - OMITTED FOR THE PURPOSES OF THIS PROJECT --- */
+    /*
     // material uniforms for car paint
     shader->setVec3("reflectionColor", config.reflectionColor);
     shader->setFloat("ambientReflectance", config.ambientReflectance);
@@ -705,6 +803,7 @@ void drawObjects()
     shader->setMat4("model", model);
 
     carWindowsModel->Draw(*shader);
+    */
 }
 
 void processInput(GLFWwindow *window) {
