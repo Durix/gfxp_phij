@@ -27,6 +27,11 @@ uniform sampler2D texture_specular1;
 uniform samplerCube skybox;
 uniform sampler2D shadowMap;
 
+// @PHIJ -- 
+uniform sampler2D leafTex;
+
+
+
 // 'in' variables to receive the interpolated Position and Normal from the vertex shader
 in vec4 worldPos;
 in vec3 worldNormal;
@@ -274,6 +279,7 @@ void main()
 
    // lighting = indirect lighting (ambient + environment) + direct lighting (diffuse + specular)
    vec3 lighting = indirectLight + directLight;
-
-   FragColor = vec4(lighting, 1.0f);
+   //if()
+   //FragColor = vec4(lighting, 1.0f);
+   FragColor = texture(leafTex, textureCoordinates);
 }

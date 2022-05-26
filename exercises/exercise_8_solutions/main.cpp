@@ -723,14 +723,17 @@ void drawObjects()
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
 
     // @PHIJ -- Draw Quad --
-    shader = pbr_shading; // change the active shader program to PBR-Shader
+    //shader = pbr_shading; // change the active shader program to PBR-Shader
     shader->use(); // applies current shader.
+    
     shader->setMat4("model", glm::mat4(1)); // Sets the identity matrix to model (?)
     shader->setMat4("viewProjection", viewProjection); // applies the view projection matrix.
 
     glDisable(GL_DEPTH_TEST);
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(GL_TEXTURE15);
     glBindTexture(GL_TEXTURE_2D, texture);
+    shader->setInt("leafTex", 15);
+    
     drawQuad(); // draws the quad.
 
     glEnable(GL_DEPTH_TEST);
