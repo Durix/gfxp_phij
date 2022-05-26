@@ -183,6 +183,9 @@ int main()
     pbr_shading = new Shader("shaders/common_shading.vert", "shaders/pbr_shading.frag");
     shader = pbr_shading;
 
+    // - @phij Load Texture
+    loadTexture(); // loads the texture
+
     /* == OMITTED FROM PROJECT ==
     carBodyModel = new Model("car/Body_LOD0.obj");
     carPaintModel = new Model("car/Paint_LOD0.obj");
@@ -430,10 +433,10 @@ void loadTexture()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // load and generate the texture
     int width, height, nrChannels;
-    unsigned char* data = stbi_load("leafTexture.jpg", &width, &height, &nrChannels, 0);
+    unsigned char* data = stbi_load("LeafTex.png", &width, &height, &nrChannels, 0);
     if (data)
     {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
     else
@@ -477,7 +480,7 @@ void drawQuad()
         glEnableVertexAttribArray(2); // - texture coords
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(3 * sizeof(float)));
         glEnableVertexAttribArray(3); // - tangent
-        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(7 * sizeof(float))); // ?
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(8 * sizeof(float))); // ?
     
     }
     // bind the vertex array... again?
@@ -725,7 +728,6 @@ void drawObjects()
     shader->setMat4("model", glm::mat4(1)); // Sets the identity matrix to model (?)
     shader->setMat4("viewProjection", viewProjection); // applies the view projection matrix.
 
-    loadTexture(); // loads the texture
     glDisable(GL_DEPTH_TEST);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
