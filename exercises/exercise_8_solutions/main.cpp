@@ -734,6 +734,8 @@ void drawObjects()
     drawQuad(); // draws the quad.
 
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
 
     // ======================
 
