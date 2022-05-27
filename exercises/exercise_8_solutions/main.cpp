@@ -219,7 +219,7 @@ int main()
     glDepthFunc(GL_LESS); // draws fragments that are closer to the screen in NDC
 
     // NEW! Enable SRGB framebuffer
-    glEnable(GL_FRAMEBUFFER_SRGB);
+    //glEnable(GL_FRAMEBUFFER_SRGB);
 
     // Dear IMGUI init
     // ---------------
@@ -455,14 +455,11 @@ void drawQuad()
 
         // Setup positions and Texture Coordiantes (Packed as 3 verticies, and 2 texture coords. strips of 5)
         float quadVerticies[] = {
-                //pos   pos   pos | txtC  txtC | norm norm norm |  tanget (3)
+                //pos   pos   pos | txtC  txtC | norm norm norm |  tangent (3) 
                 -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
                 -1.0f,  1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
                 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-                1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-                
-
-
+                1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f
         };
 
         // Setup Plane Vertex Array Object
@@ -729,16 +726,17 @@ void drawObjects()
     shader->setMat4("model", glm::mat4(1)); // Sets the identity matrix to model (?)
     shader->setMat4("viewProjection", viewProjection); // applies the view projection matrix.
 
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    //glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     glDisable(GL_DEPTH_TEST);
     glActiveTexture(GL_TEXTURE15);
     glBindTexture(GL_TEXTURE_2D, texture);
     shader->setInt("leafTex", 15);
     
     drawQuad(); // draws the quad.
-
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
 
     // ======================
 

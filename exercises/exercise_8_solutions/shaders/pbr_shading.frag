@@ -46,7 +46,7 @@ in vec4 lightPos;
 // Constant Pi
 const float PI = 3.14159265359;
 
-
+/*
 // Schlick approximation of the Fresnel term
 vec3 FresnelSchlick(vec3 F0, float cosTheta)
 {
@@ -213,10 +213,11 @@ float GetShadow()
    // TODO 8.1 : Compare the depth value obtained with the Z component of the light in shadow map space. Return 0 if depth is smaller or equal, 1 otherwise
    return depth + 0.01f <= clamp(shadowMapSpacePos.z, -1, 1) ? 0.0 : 1.0;
 }
-
+*/
 
 void main()
 {
+   /*
    vec4 P = worldPos;
 
    vec3 N = GetNormalMap();
@@ -281,5 +282,7 @@ void main()
    vec3 lighting = indirectLight + directLight;
    //if()
    //FragColor = vec4(lighting, 1.0f);
+   */
+   
    FragColor = texture(leafTex, textureCoordinates);
 }
