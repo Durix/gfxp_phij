@@ -311,7 +311,6 @@ int main()
 }
 
 void drawGui(){
-    glDisable(GL_FRAMEBUFFER_SRGB);
 
     // Start the Dear ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
@@ -365,7 +364,6 @@ void drawGui(){
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    glEnable(GL_FRAMEBUFFER_SRGB);
 }
 
 void setAmbientUniforms(glm::vec3 ambientLightColor)
