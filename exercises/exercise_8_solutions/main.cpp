@@ -35,6 +35,8 @@ const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
 Shader* shader;
 Shader* phong_shading;
 Shader* pbr_shading;
+// @PHIJ
+Shader* leaf_shading;
 Shader* shadowMap_shader;
 Model* carBodyModel;
 Model* carPaintModel;
@@ -49,7 +51,7 @@ GLuint carLightTexture;
 GLuint carWindowsTexture;
 GLuint carWheelTexture;
 GLuint floorTexture;
-//??? - @phij
+//@phij
 //GLuint gAccum;
 unsigned int texture;
 //------------
@@ -181,6 +183,7 @@ int main()
     // ----------------------------------
     phong_shading = new Shader("shaders/common_shading.vert", "shaders/phong_shading.frag");
     pbr_shading = new Shader("shaders/common_shading.vert", "shaders/pbr_shading.frag");
+    leaf_shading = new Shader("shaders/common_shading.vert", "shaders/leaf_shading.frag");
     shader = pbr_shading;
 
     // - @phij Load Texture
@@ -217,9 +220,6 @@ int main()
     glDepthRange(-1,1); // make the NDC a right handed coordinate system, with the camera pointing towards -z
     glEnable(GL_DEPTH_TEST); // turn on z-buffer depth test
     glDepthFunc(GL_LESS); // draws fragments that are closer to the screen in NDC
-
-    // NEW! Enable SRGB framebuffer
-    //glEnable(GL_FRAMEBUFFER_SRGB);
 
     // Dear IMGUI init
     // ---------------
@@ -324,7 +324,7 @@ void drawGui(){
         ImGui::ColorEdit3("ambient light color", (float*)&config.ambientLightColor);
         ImGui::SliderFloat("ambient light intensity", &config.ambientLightIntensity, 0.0f, 1.0f);
         ImGui::Separator();
-
+        
         ImGui::Text("Light 1: ");
         ImGui::DragFloat3("light 1 direction", (float*)&config.lights[0].position, .1f, -20, 20);
         ImGui::ColorEdit3("light 1 color", (float*)&config.lights[0].color);
@@ -356,6 +356,8 @@ void drawGui(){
         {
             if (ImGui::RadioButton("Blinn-Phong Shading", shader == phong_shading)) { shader = phong_shading; }
             if (ImGui::RadioButton("PBR Shading", shader == pbr_shading)) { shader = pbr_shading; }
+            if (ImGui::RadioButton("Leaf Shading", shader == leaf_shading)) { shader = leaf_shading; }
+
         }
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::End();
