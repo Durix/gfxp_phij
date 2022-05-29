@@ -170,6 +170,7 @@ vec3 GetEnvironmentLighting(vec3 N, vec3 V)
    return reflection;
 }
 
+//--- NOT NEEDED ---
 vec3 GetLambertianDiffuseLighting(vec3 N, vec3 L, vec3 albedo)
 {
    vec3 diffuse = diffuseReflectance * albedo;
@@ -189,6 +190,8 @@ vec3 GetBlinnPhongSpecularLighting(vec3 N, vec3 L, vec3 V)
 
    return specular;
 }
+//---
+
 
 float GetAttenuation(vec4 P)
 {

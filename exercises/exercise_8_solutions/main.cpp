@@ -52,8 +52,9 @@ GLuint carWindowsTexture;
 GLuint carWheelTexture;
 GLuint floorTexture;
 //@phij
-//GLuint gAccum;
-unsigned int texture;
+unsigned int leaf_texture;
+unsigned int leaf_texture_normal;
+unsigned int leaf_texture_translusency;
 //------------
 Camera camera(glm::vec3(0.0f, 1.6f, 5.0f));
 
@@ -138,7 +139,7 @@ void createShadowMap();
 void setShadowUniforms();
 // == PHIJ ==
 void drawQuad();
-void loadTexture();
+unsigned int loadTexture(string name);
 // ==========
 
 int main()
@@ -184,11 +185,12 @@ int main()
     phong_shading = new Shader("shaders/common_shading.vert", "shaders/phong_shading.frag");
     pbr_shading = new Shader("shaders/common_shading.vert", "shaders/pbr_shading.frag");
     leaf_shading = new Shader("shaders/common_shading.vert", "shaders/leaf_shading.frag");
-    shader = pbr_shading;
+    shader = leaf_shading;
 
     // - @phij Load Texture
-    loadTexture(); // loads the texture
-
+    leaf_texture = loadTexture("leaf05_basecolor_transparent.png"); // loads the texture
+    leaf_texture_normal = loadTexture("leaf05_normal.png");
+    leaf_texture_translusency = loadTexture("leaf05_scattering.png");
     /* == OMITTED FROM PROJECT ==
     carBodyModel = new Model("car/Body_LOD0.obj");
     carPaintModel = new Model("car/Paint_LOD0.obj");
@@ -268,7 +270,7 @@ int main()
         setLightUniforms(config.lights[0]);
         setShadowUniforms();
         drawObjects();
-
+        
         // Additional additive lights
         setupForwardAdditionalPass();
         for (int i = 1; i < config.lights.size(); ++i)
@@ -421,11 +423,12 @@ void resetForwardAdditionalPass()
     glDepthFunc(GL_LESS);
 }
 
-void loadTexture()
+unsigned int loadTexture(string name)
 {
+    unsigned int id = -1;
 // taken directly from: https://learnopengl.com/Getting-started/Textures
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    glGenTextures(1, &id);
+    glBindTexture(GL_TEXTURE_2D, id);
     // set the texture wrapping/filtering options (on the currently bound texture object)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -433,7 +436,8 @@ void loadTexture()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // load and generate the texture
     int width, height, nrChannels;
-    unsigned char* data = stbi_load("LeafTex.png", &width, &height, &nrChannels, 0);
+    // "LeafTex.png" <-- This is the cutout call.
+    unsigned char* data = stbi_load(name.c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
@@ -443,7 +447,9 @@ void loadTexture()
     {
         std::cout << "Failed to load texture" << std::endl;
     }
-    stbi_image_free(data);
+    stbi_image_free(data); 
+
+    return id;
 }
 
 // PHIJ - Inspired from Excercise 9
@@ -456,10 +462,10 @@ void drawQuad()
         // Setup positions and Texture Coordiantes (Packed as 3 verticies, and 2 texture coords. strips of 5)
         float quadVerticies[] = {
                 //pos   pos   pos | txtC  txtC | norm norm norm |  tangent (3) 
-                -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-                -1.0f,  1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-                1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-                1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f
+                -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+                -1.0f,  1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+                1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+                1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f
         };
 
         // Setup Plane Vertex Array Object
@@ -596,8 +602,6 @@ unsigned int loadCubemap(vector<std::string> faces)
     return textureID;
 }
 
-
-
 void drawSkybox()
 {
     // render skybox
@@ -617,7 +621,6 @@ void drawSkybox()
     glBindVertexArray(0);
     glDepthFunc(GL_LESS); // set depth function back to default
 }
-
 
 void createShadowMap()
 {
@@ -640,7 +643,6 @@ void createShadowMap()
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
-
 
 void drawShadowMap()
 {
@@ -726,16 +728,25 @@ void drawObjects()
     shader->setMat4("model", glm::mat4(1)); // Sets the identity matrix to model (?)
     shader->setMat4("viewProjection", viewProjection); // applies the view projection matrix.
 
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST); 
+    //glEnable(GL_BLEND);
     //glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glDisable(GL_DEPTH_TEST);
-    glActiveTexture(GL_TEXTURE15);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    shader->setInt("leafTex", 15);
-    
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, leaf_texture);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, leaf_texture_normal);
+    glActiveTexture(GL_TEXTURE7);
+    glBindTexture(GL_TEXTURE_2D, leaf_texture_translusency);
+
+    shader->setInt("texture_diffuse1", 1);
+    shader->setInt("texture_normal1", 2);
+    shader->setInt("texture_translucency1", 7);
+
+
     drawQuad(); // draws the quad.
 
     // ======================
