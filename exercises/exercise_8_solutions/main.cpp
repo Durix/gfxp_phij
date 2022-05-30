@@ -55,6 +55,7 @@ GLuint floorTexture;
 unsigned int leaf_texture;
 unsigned int leaf_texture_normal;
 unsigned int leaf_texture_translusency;
+unsigned int leaf_texture_roughness;
 //------------
 Camera camera(glm::vec3(0.0f, 1.6f, 5.0f));
 
@@ -140,6 +141,7 @@ void setShadowUniforms();
 // == PHIJ ==
 void drawQuad();
 unsigned int loadTexture(string name);
+unsigned int loadTextureNoAlpha(string name);
 // ==========
 
 int main()
@@ -191,6 +193,7 @@ int main()
     leaf_texture = loadTexture("leaf05_basecolor_transparent.png"); // loads the texture
     leaf_texture_normal = loadTexture("leaf05_normal.png");
     leaf_texture_translusency = loadTexture("leaf05_scattering.png");
+    leaf_texture_roughness = loadTextureNoAlpha("leaf05_roughnessR.png");
     /* == OMITTED FROM PROJECT ==
     carBodyModel = new Model("car/Body_LOD0.obj");
     carPaintModel = new Model("car/Paint_LOD0.obj");
@@ -305,6 +308,7 @@ int main()
     delete phong_shading;
     delete pbr_shading;
     delete shadowMap_shader;
+    delete leaf_shading;
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
@@ -421,6 +425,35 @@ void resetForwardAdditionalPass()
 
     // Restore default depth test
     glDepthFunc(GL_LESS);
+}
+
+unsigned int loadTextureNoAlpha(string name)
+{
+    unsigned int id = -1;
+    // taken directly from: https://learnopengl.com/Getting-started/Textures
+    glGenTextures(1, &id);
+    glBindTexture(GL_TEXTURE_2D, id);
+    // set the texture wrapping/filtering options (on the currently bound texture object)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // load and generate the texture
+    int width, height, nrChannels;
+    // "LeafTex.png" <-- This is the cutout call.
+    unsigned char* data = stbi_load(name.c_str(), &width, &height, &nrChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        std::cout << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
+
+    return id;
 }
 
 unsigned int loadTexture(string name)
@@ -729,23 +762,29 @@ void drawObjects()
     shader->setMat4("viewProjection", viewProjection); // applies the view projection matrix.
 
     glEnable(GL_DEPTH_TEST); 
+
+    //-- Alpha blending (OGL stuff)
     //glEnable(GL_BLEND);
     //glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glDisable(GL_DEPTH_TEST);
 
+    //-- Textre binding to shader uniforms. (Only leaf shader takes these)
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, leaf_texture);
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, leaf_texture_normal);
     glActiveTexture(GL_TEXTURE7);
     glBindTexture(GL_TEXTURE_2D, leaf_texture_translusency);
+    glActiveTexture(GL_TEXTURE8);
+    glBindTexture(GL_TEXTURE_2D, leaf_texture_roughness);
 
+    
     shader->setInt("texture_diffuse1", 1);
     shader->setInt("texture_normal1", 2);
     shader->setInt("texture_translucency1", 7);
-
+    shader->setInt("texture_roughness1", 8);
 
     drawQuad(); // draws the quad.
 

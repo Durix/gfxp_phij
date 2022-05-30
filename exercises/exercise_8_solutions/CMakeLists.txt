@@ -44,6 +44,7 @@ file(COPY ${CMAKE_SOURCE_DIR}/common/import/leaf05_opacity.png DESTINATION ${CMA
 file(COPY ${CMAKE_SOURCE_DIR}/common/import/leaf05_roughness.png DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/common/import/leaf05_scattering.png DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/common/import/leaf05_basecolor_transparent.png DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/common/import/leaf05_roughnessR.png DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 
 
