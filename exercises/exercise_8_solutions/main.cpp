@@ -551,9 +551,7 @@ void drawQuad()
     glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); // draw verticies in the vertex array as a triangle strip (memory effecient)
     glBindVertexArray(0); // unbinds active VAO. presumably to avoid memory overflow.
-
 }
-
 
 // init the VAO of the skybox
 // --------------------------
@@ -749,7 +747,6 @@ void drawShadowMap()
     shader = currShader;
 }
 
-
 void setShadowUniforms()
 {
     // shadow uniforms
@@ -771,7 +768,7 @@ void drawObjects()
     glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
     glm::mat4 view = camera.GetViewMatrix();
     glm::mat4 viewProjection = projection * view;
-
+    
     // camera position
     shader->setVec3("camPosition", camera.Position);
     // set viewProjection matrix uniform
@@ -783,7 +780,6 @@ void drawObjects()
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
 
     // @PHIJ -- Draw Quad --
-    //shader = pbr_shading; // change the active shader program to PBR-Shader
     shader->use(); // applies current shader.
     
     shader->setMat4("model", glm::mat4(1)); // Sets the identity matrix to model (?)
@@ -821,57 +817,6 @@ void drawObjects()
 
     /* --- CAR MODEL IMPORT - OMITTED FOR THE PURPOSES OF THIS PROJECT --- */
     /*
-    // material uniforms for car paint
-    shader->setVec3("reflectionColor", config.reflectionColor);
-    shader->setFloat("ambientReflectance", config.ambientReflectance);
-    shader->setFloat("diffuseReflectance", config.diffuseReflectance);
-    shader->setFloat("specularReflectance", config.specularReflectance);
-    shader->setFloat("specularExponent", config.specularExponent);
-    shader->setFloat("roughness", config.roughness);
-    shader->setFloat("metalness", config.metalness);
-
-    glm::mat4 model = glm::mat4(1.0f);
-    shader->setMat4("model", model);
-    carPaintModel->Draw(*shader);
-
-    // material uniforms for other car parts (hardcoded)
-    shader->setVec3("reflectionColor", 1.0f, 1.0f, 1.0f);
-    shader->setFloat("ambientReflectance", 0.75f);
-    shader->setFloat("diffuseReflectance", 0.75f);
-    shader->setFloat("specularReflectance", 0.5f);
-    shader->setFloat("specularExponent", 10.0f);
-    shader->setFloat("roughness", 0.5f);
-    shader->setFloat("metalness", 0.0f);
-
-    carBodyModel->Draw(*shader);
-
-    // draw car
-    shader->setMat4("model", model);
-    carLightModel->Draw(*shader);
-    carInteriorModel->Draw(*shader);
-
-    // draw wheel
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(-.7432f, .328f, 1.39f));
-    shader->setMat4("model", model);
-    carWheelModel->Draw(*shader);
-
-    // draw wheel
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(-.7432f, .328f, -1.39f));
-    shader->setMat4("model", model);
-    carWheelModel->Draw(*shader);
-
-    // draw wheel
-    model = glm::rotate(glm::mat4(1.0f), glm::pi<float>(), glm::vec3(0.0, 1.0, 0.0));
-    model = glm::translate(model, glm::vec3(-.7432f, .328f, 1.39f));
-    shader->setMat4("model", model);
-    carWheelModel->Draw(*shader);
-
-    // draw wheel
-    model = glm::rotate(glm::mat4(1.0f), glm::pi<float>(), glm::vec3(0.0, 1.0, 0.0));
-    model = glm::translate(model, glm::vec3(-.7432f, .328f, -1.39f));
-    shader->setMat4("model", model);
-    carWheelModel->Draw(*shader);
-
     // draw floor
     model = glm::scale(glm::mat4(1.0), glm::vec3(5.f, 5.f, 5.f));
     shader->setMat4("model", model);

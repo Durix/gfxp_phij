@@ -40,7 +40,7 @@ in vec2 textureCoordinates;
 //in vec4 lightPos;
 
 const float PI = 3.14159265359;
-
+float rough_local;
 
 vec3 GetAmbientLighting(vec3 albedo, vec3 normal)
 {
@@ -72,7 +72,8 @@ vec3 GetEnvironmentLighting(vec3 N, vec3 V)
 
    // Sample cubemap
    // HACK: We sample a different mipmap depending on the roughness. Rougher surface will have blurry reflection
-   vec3 reflection = textureLod(skybox, R, roughness * 5.0f).rgb;
+   //vec3 reflection = textureLod(skybox, R, roughness * 5.0f).rgb;
+   vec3 reflection = textureLod(skybox, R, rough_local * 5.0f).rgb;
 
    // We packed the amount of reflection in ambientLightColor.a
    // Only apply reflection (and ambient) during the first light pass
@@ -135,8 +136,14 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float a)
 {
    float NdotV = max(dot(N, V), 0.0);
    float NdotL = max(dot(N, L), 0.0);
-   float ggx2  = GeometrySchlickGGX(NdotV, roughness);
-   float ggx1  = GeometrySchlickGGX(NdotL, roughness);
+
+   // rough_local
+   //float ggx2  = GeometrySchlickGGX(NdotV, roughness);
+   //float ggx1  = GeometrySchlickGGX(NdotL, roughness);
+
+   float ggx2  = GeometrySchlickGGX(NdotV, rough_local);
+   float ggx1  = GeometrySchlickGGX(NdotL, rough_local);
+
 
    return ggx1 * ggx2;
 }
@@ -146,7 +153,7 @@ vec3 GetCookTorranceSpecularLighting(vec3 N, vec3 L, vec3 V)
    vec3 H = normalize(L + V);
 
    // Remap alpha parameter to roughness^2
-   float a = roughness * roughness;
+   float a = rough_local * rough_local;
 
    float D = DistributionGGX(N, H, a);
    float G = GeometrySmith(N, V, L, a);
@@ -208,7 +215,7 @@ void main()
     vec3 F0 = vec3(0.04f);
     vec3 F = FresnelSchlick(F0, max(dot(H, V), 0.0));
     // overwrite roughness uniform.
-    vec4 rough_local = vec4(texture(texture_roughness1, textureCoordinates).rgb, 1.0f);
+    rough_local = vec4(texture(texture_roughness1, textureCoordinates).rgb, 1.0f).r;
 
     //-----
 
@@ -229,18 +236,18 @@ void main()
     lightRadiance *= max(dot(N, L), 0.0);
     vec3 FAmbient = FresnelSchlick(F0, max(dot(N, V), 0.0));
     vec3 indirectLight = mix(GetAmbientLighting(texColor.rgb,N), GetEnvironmentLighting(N,V), FAmbient);
-
-
+    
 	//vec3 directLight = max(diffuse, 0) * texColor.rgb * lightColor;
     //vec3 transluscentLight = max(-diffuse,0) * (transluscencySample.rgb * 0.25f) * lightColor;
     
-
 	vec3 directLight = max(mix(diffuse, specular, F),0);
     directLight *= lightRadiance;
 
-    vec3 transluscentLight = max(-diffuse,0) * transluscencySample.rgb * lightColor;
+    vec3 diffuseNeg = max(-diffuse, 0);
+    float transSample = transluscencySample.r * 0.25f; // multiply by constant to reduce or increase saturation
+    vec3 transluscentLight = vec3(diffuseNeg.r * transSample, diffuseNeg.g * transSample, diffuseNeg.b * transSample ) * lightColor;
     
     // final frag coloring.
-	FragColor = vec4(directLight + transluscentLight, 1.0f);
+	FragColor = vec4((indirectLight + directLight) + transluscentLight, 1.0f);
 }
 
