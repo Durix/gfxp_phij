@@ -11,7 +11,7 @@ uniform float lightRadius;
 
 // material properties
 uniform vec3 reflectionColor; // not needed?
-uniform float roughness;
+uniform float roughness; // - overwritten by texture sample
 uniform float metalness; // not needed?
 // legacy uniforms, not needed for PBR
 uniform float ambientReflectance;
@@ -160,16 +160,6 @@ vec3 GetCookTorranceSpecularLighting(vec3 N, vec3 L, vec3 V)
    return vec3(specular);
 }
 
-// blinn-phong diffuse. - NOT PBR COMPLIANT - 
-/*
-vec3 GetLambertianDiffuseLighting(vec3 N, vec3 L, vec3 albedo)
-{
-   vec3 diffuse = diffuseReflectance * albedo;
-   diffuse /= PI;
-
-   return diffuse;
-}
-*/
 
 // super-simple Labertian Diffuse.
 float GetLambertianDiffuse(vec3 lightDir, vec3 normalMap){
@@ -199,21 +189,6 @@ float GetAttenuation(vec4 P)
    return attenuation * falloff;
 }
 
-// -- No shadowmap!
-/*
-float GetShadow()
-{
-   // TODO 8.1 : Transform the position in light space to shadow map space: from range (-1, 1) to range (0, 1)
-   vec3 shadowMapSpacePos = (lightPos.xyz / lightPos.w) * 0.5 + 0.5;
-
-   // TODO 8.1 : Sample the shadow map texture using the XY components of the light in shadow map space
-   float depth = texture(shadowMap, shadowMapSpacePos.xy).r;
-
-   // TODO 8.1 : Compare the depth value obtained with the Z component of the light in shadow map space. Return 0 if depth is smaller or equal, 1 otherwise
-   return depth + 0.01f <= clamp(shadowMapSpacePos.z, -1, 1) ? 0.0 : 1.0;
-}
-*/
-
 void main()
 {
     
@@ -232,7 +207,10 @@ void main()
     vec3 H = normalize(L + V);
     vec3 F0 = vec3(0.04f);
     vec3 F = FresnelSchlick(F0, max(dot(H, V), 0.0));
-	//-----
+    // overwrite roughness uniform.
+    vec4 rough_local = vec4(texture(texture_roughness1, textureCoordinates).rgb, 1.0f);
+
+    //-----
 
     vec3 diffuse = GetLambertianDiffuse(L, N) * texColor.rgb;
     if(gl_FrontFacing){
@@ -254,14 +232,13 @@ void main()
 
 
 	//vec3 directLight = max(diffuse, 0) * texColor.rgb * lightColor;
-    vec3 transluscentLight = max(-diffuse,0) * (transluscencySample.rgb * 0.25f) * lightColor;
+    //vec3 transluscentLight = max(-diffuse,0) * (transluscencySample.rgb * 0.25f) * lightColor;
     
+
 	vec3 directLight = max(mix(diffuse, specular, F),0);
     directLight *= lightRadiance;
-    // -- Not sure why this doesn't work.
-    //vec3 transluscentLight = max(mix(-diffuse, specular, F) * transluscencySample.rgb * 0.25f,0);
-    
-    
+
+    vec3 transluscentLight = max(-diffuse,0) * transluscencySample.rgb * lightColor;
     
     // final frag coloring.
 	FragColor = vec4(directLight + transluscentLight, 1.0f);
