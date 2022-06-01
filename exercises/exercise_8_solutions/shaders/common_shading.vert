@@ -4,9 +4,12 @@ layout (location = 1) in vec3 normal;
 layout (location = 2) in vec2 textCoord;
 layout (location = 3) in vec3 tangent;
 
-uniform mat4 model; // represents model coordinates in the world coord space
+//uniform mat4 model; // represents model coordinates in the world coord space
 uniform mat4 viewProjection;  // represents the view and projection matrices combined
 uniform mat4 lightSpaceMatrix;   // transforms from world space to light space
+// @PHIJ 
+uniform mat4 models[100]; // - uniform denoting offset positions for instancing.
+
 
 out vec4 worldPos;
 out vec3 worldNormal;
@@ -16,7 +19,15 @@ out vec2 textureCoordinates;
 // TODO 8.1 : Add an 'out' variable for vertex position in light space
 out vec4 lightPos;
 
+void SetPosition(vec4 computedPosition){
+    //vec2 local_offSet = offSets[gl_InstanceID];
+    //gl_Position = vec4(computedPosition.x + local_offSet.x, computedPosition.y + local_offSet.y, computedPosition.z, computedPosition.w);
+}
+
+
 void main() {
+
+    mat4 model = models[gl_InstanceID];
 
    // vertex in world space (for lighting computation)
    worldPos = model * vec4(vertex, 1.0);
@@ -32,4 +43,9 @@ void main() {
 
    // final vertex position (for opengl rendering, not for lighting)
    gl_Position = viewProjection * worldPos;
+   
+    // --- for instancing, uncomment this.
+    //vec4 pos = viewProjection * vec4(vertex, 1.0f);
+    //SetPosition(pos);
+
 }

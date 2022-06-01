@@ -169,19 +169,6 @@ vec3 GetLambertianDiffuse(vec3 texC){
     return texC / PI;
 }
 
-/*
-float lambertianDiffuseOnFace(vec3 lightDir, vec3 normalMap){
-    // normal mapping / front/back-face check
-    float lamDiff = dot(lightDir,normalMap);
-       if(gl_FrontFacing){
-		lamDiff = -lamDiff;
-		//N *= -1.0f;
-		//T *= -1.0f;
-	}
-    return lamDiff;
-}
-*/
-
 float GetAttenuation(vec4 P)
 {
    float distToLight = distance(lightPosition, P.xyz);
@@ -242,12 +229,13 @@ void main()
     float transSample = transluscencySample.r * 0.25f; // multiply by constant to reduce or increase saturation
     vec3 transluscentLight = baseTranslucency * transSample * lightColor;
     
-    vec3 notSpecular = mix(diffuse, transluscentLight, exp(-epsilonC*(transSample * 10.0f)));
+    vec3 notSpecular = mix(diffuse, transluscentLight, exp(-epsilonC*(1-transSample) * 10.0f));
     vec3 directLight = mix(notSpecular, specular, F);
     directLight *= lightRadiance;
     // final frag coloring.
 	//FragColor = vec4((indirectLight + directLight) + transluscentLight, 1.0f);
-    FragColor = vec4((indirectLight + directLight) + transluscentLight, 1.0f);
+    
+    FragColor = vec4((indirectLight + directLight), 1.0f);
     // specular * lightRadiance
 }
 

@@ -143,8 +143,12 @@ void drawQuad();
 unsigned int loadTexture(string name);
 unsigned int loadTextureNoAlpha(string name);
 unsigned int loadTextureRED(string name);
-float epsilon;
-float c;
+void GenerateOffsets();
+float epsilon = 0.2f;
+float c = 0.5f;
+//glm::vec2 offsets[100];
+glm::mat4 models[100];
+int instanceCount = 1;
 // ==========
 
 int main()
@@ -190,9 +194,11 @@ int main()
     phong_shading = new Shader("shaders/common_shading.vert", "shaders/phong_shading.frag");
     pbr_shading = new Shader("shaders/common_shading.vert", "shaders/pbr_shading.frag");
     leaf_shading = new Shader("shaders/common_shading.vert", "shaders/leaf_shading.frag");
+
     shader = leaf_shading;
 
-    // - @phij Load Texture
+
+    // - @PHIJ Texture Loading
     leaf_texture = loadTexture("leaf05_basecolor_transparent.png"); // loads the texture
     leaf_texture_normal = loadTexture("leaf05_normal.png");
     leaf_texture_translusency = loadTextureRED("leaf05_translucency.png");
@@ -222,6 +228,9 @@ int main()
 
     createShadowMap();
     shadowMap_shader = new Shader("shaders/shadowmap.vert", "shaders/shadowmap.frag");
+
+    GenerateOffsets(); // @PHIJ - Generate the offsets and apply the values to the uniform.
+
 
     // set up the z-buffer
     // -------------------
@@ -258,7 +267,7 @@ int main()
 
         // Rotate light 2
         if (lightRotationSpeed > 0.0f)
-        {
+        {   
             glm::vec4 rotatedLight = glm::rotate(glm::mat4(1.0f), lightRotationSpeed * deltaTime, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(config.lights[1].position, 1.0f);
             config.lights[1].position = glm::vec3(rotatedLight.x, rotatedLight.y, rotatedLight.z);
         }
@@ -272,7 +281,7 @@ int main()
         drawShadowMap();
 
         shader->use();
-
+        
         // First light + ambient
         setAmbientUniforms(config.ambientLightColor * config.ambientLightIntensity);
         setLightUniforms(config.lights[0]);
@@ -335,29 +344,16 @@ void drawGui(){
         ImGui::Text("Light 1: ");
         ImGui::DragFloat3("light 1 direction", (float*)&config.lights[0].position, .1f, -20, 20);
         ImGui::ColorEdit3("light 1 color", (float*)&config.lights[0].color);
-        ImGui::SliderFloat("light 1 intensity", &config.lights[0].intensity, 0.0f, 2.0f);
+        ImGui::SliderFloat("light 1 intensity", &config.lights[0].intensity, 0.0f, 10.0f);
         ImGui::Separator();
 
         ImGui::Text("Light 2: ");
         ImGui::DragFloat3("light 2 position", (float*)&config.lights[1].position, .1f, -20, 20);
         ImGui::ColorEdit3("light 2 color", (float*)&config.lights[1].color);
-        ImGui::SliderFloat("light 2 intensity", &config.lights[1].intensity, 0.0f, 2.0f);
+        ImGui::SliderFloat("light 2 intensity", &config.lights[1].intensity, 0.0f, 10.0f);
         ImGui::SliderFloat("light 2 radius", &config.lights[1].radius, 0.01f, 50.0f);
         ImGui::SliderFloat("light 2 speed", &lightRotationSpeed, 0.0f, 2.0f);
         ImGui::Separator();
-        /* == OMITTED FROM PROJECT 
-        ImGui::Text("Car paint material: ");
-        ImGui::ColorEdit3("color", (float*)&config.reflectionColor);
-        ImGui::Separator();
-        ImGui::SliderFloat("ambient reflectance", &config.ambientReflectance, 0.0f, 1.0f);
-        ImGui::SliderFloat("diffuse reflectance", &config.diffuseReflectance, 0.0f, 1.0f);
-        ImGui::SliderFloat("specular reflectance", &config.specularReflectance, 0.0f, 1.0f);
-        ImGui::SliderFloat("specular exponent", &config.specularExponent, 0.0f, 100.0f);
-        ImGui::Separator();
-        ImGui::SliderFloat("roughness", &config.roughness, 0.01f, 1.0f);
-        ImGui::SliderFloat("metalness", &config.metalness, 0.0f, 1.0f);
-        ImGui::Separator();
-        */
         
         ImGui::Text("Shading model: ");
         {
@@ -371,6 +367,17 @@ void drawGui(){
         ImGui::Text("Beer's Law constants");
         ImGui::SliderFloat("Epsilon", &epsilon, 0.01f, 1.0f);
         ImGui::SliderFloat("c-value", &c, 0.01f, 1.0f);
+        ImGui::Separator();
+
+        ImGui::Text("Instancing");
+        ImGui::SliderInt("instance Count", &instanceCount, 1, 100);
+        ImGui::Separator();
+
+
+        ImGui::Text("Leaf Transform");
+        //ImGui::DragFloat3("Leaf Position", );
+        //ImGui::DragFloat3("Leaf Rotation", );
+        //ImGui::Separator();
         
 
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
@@ -420,7 +427,6 @@ void setupForwardAdditionalPass()
     glActiveTexture(GL_TEXTURE5);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
-
 
 void resetForwardAdditionalPass()
 {
@@ -535,7 +541,7 @@ void drawQuad()
                 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
                 1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f
         };
-
+        
         // Setup Plane Vertex Array Object
         glGenVertexArrays(1, &quadVAO); // Generates a vertex array with an associated id
         glGenBuffers(1, &quadVBO); // generates a buffer object with an associated ID
@@ -556,7 +562,7 @@ void drawQuad()
     }
     // bind the vertex array... again?
     glBindVertexArray(quadVAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); // draw verticies in the vertex array as a triangle strip (memory effecient)
+    glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, instanceCount); // draw verticies in the vertex array as a triangle strip (memory effecient)
     glBindVertexArray(0); // unbinds active VAO. presumably to avoid memory overflow.
 }
 
@@ -819,26 +825,39 @@ void drawObjects()
 
     drawQuad(); // draws the quad.
 
-    // ======================
+}
 
+void GenerateOffsets() {
+    int index = 0;
+    float rLow = 0.6f;  
+    float rHigh = 1.6f;
+ 
+    for (int i = 0; i < 100; i++) {
+        
+        
+        glm::mat4 baseMatrix = glm::mat4(1.0);
+        // - translate to place in world
+        baseMatrix = glm::translate(baseMatrix, glm::vec3(i % 10, (int)i / 10, 0.0));
 
-    /* --- CAR MODEL IMPORT - OMITTED FOR THE PURPOSES OF THIS PROJECT --- */
-    /*
-    // draw floor
-    model = glm::scale(glm::mat4(1.0), glm::vec3(5.f, 5.f, 5.f));
-    shader->setMat4("model", model);
-    shader->setFloat("specularReflectance", 0.2f);
-    shader->setFloat("roughness", 0.95f);
-    floorModel->Draw(*shader);
+        // - rotate by a random float value. (RAND_MAX/6.28 is to randomize radians. 6.28 = full circle)
+        float r = static_cast <float> (rand() / static_cast <float> (RAND_MAX/6.28f));
+        baseMatrix = glm::rotate(baseMatrix, r , glm::vec3(0.0f, 0.0f, 1.0f));
+        
+        // - scale up and or down. 
+        r = rLow + static_cast <float> (rand() / static_cast <float> (RAND_MAX/(rHigh - rLow)));
+        baseMatrix = glm::scale(baseMatrix, glm::vec3(r, r, 1.0));
+        models[index++] = baseMatrix;
+        
+    }   
+    
+    // send array to uniform value in common_shading.vert
+    shader->use(); // we can do this with any shader, seeing as they are all bound to the common_shading vertex shader.
+    for (unsigned int i = 0; i < 100; i++)
+    {
+        //shader->setVec2((("offSets[" + std::to_string(i) + "]")), offsets[i]);
+        shader->setMat4((("models[" + std::to_string(i) + "]")), models[i]);
 
-    shader->setFloat("specularReflectance", 1.0f);
-    shader->setFloat("specularExponent", 20.0f);
-    shader->setFloat("roughness", 0.25f);
-    model = glm::mat4(1.0f);
-    shader->setMat4("model", model);
-
-    carWindowsModel->Draw(*shader);
-    */
+    }
 }
 
 void processInput(GLFWwindow *window) {
