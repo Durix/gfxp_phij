@@ -11,7 +11,7 @@ uniform float lightRadius;
 
 // material properties
 uniform vec3 reflectionColor; // not needed?
-uniform float roughness; // - overwritten by texture sample
+uniform float roughness; // - overwritten by roughness texture sample per fragment.
 uniform float metalness; // not needed?
 // legacy uniforms, not needed for PBR
 uniform float ambientReflectance;
@@ -23,13 +23,14 @@ uniform float specularExponent;			//unused?
 uniform sampler2D texture_diffuse1;		// gl_tex1 - albedo coloring
 uniform sampler2D texture_normal1;		// gl_tex2 - normal map (wo/ bumps)
 uniform sampler2D texture_ambient1;		// unused - no ambient texture
-uniform sampler2D texture_specular1;	// unused - no specular mapping.
+uniform sampler2D texture_specular1;	// unused - no specular texture, we compute this instead.
 uniform samplerCube skybox;				// gl_tex5 - Skybox cubemap
 uniform sampler2D shadowMap;			// gl_tex6 - shadow map
 
 // @PHIJ -- 
-uniform sampler2D texture_translucency1; // gl_tex7 - scattering texture
-uniform sampler2D texture_roughness1; // gl_tex8 - roughness texture
+uniform sampler2D texture_translucency1;// gl_tex7 - translucency texture
+uniform sampler2D texture_roughness1;   // gl_tex8 - roughness texture
+uniform float epsilonC; // - A float of a computed constant value for beer's law.
 
 // 'in' variables to receive the interpolated Position and Normal from the vertex shader
 in vec4 worldPos;
@@ -40,23 +41,20 @@ in vec2 textureCoordinates;
 //in vec4 lightPos;
 
 const float PI = 3.14159265359;
-float rough_local;
+float rough_local; // replaced all uses of roughness uniform with roughness texture sampling.
 
 vec3 GetAmbientLighting(vec3 albedo, vec3 normal)
 {
-   // TODO 8.2 : Remove this line
-   //vec3 ambient = ambientLightColor.rgb * albedo;
 
-   // TODO 8.2 : Get the ambient color by sampling the skybox using the normal.
    vec3 ambient = textureLod(skybox, normal, 5.0f).rgb;
 
-   // TODO 8.2 : Scale the light by the albedo, considering also that it gets reflected equally in all directions
+   // Scale the light by the albedo, considering also that it gets reflected equally in all directions
    ambient *= albedo / PI;
 
    // Only apply ambient during the first light pass
    ambient *= ambientLightColor.a; 
 
-   // NEW! Ambient occlusion (try disabling it to see how it affects the visual result)
+   // Ambient occlusion
    float ambientOcclusion = texture(texture_ambient1, textureCoordinates).r;
    ambient *= ambientOcclusion;
 
@@ -65,14 +63,11 @@ vec3 GetAmbientLighting(vec3 albedo, vec3 normal)
 
 vec3 GetEnvironmentLighting(vec3 N, vec3 V)
 {
-   //NEW! Environment reflection
-
    // Compute reflected light vector (R)
    vec3 R = reflect(-V, N);
 
    // Sample cubemap
    // HACK: We sample a different mipmap depending on the roughness. Rougher surface will have blurry reflection
-   //vec3 reflection = textureLod(skybox, R, roughness * 5.0f).rgb;
    vec3 reflection = textureLod(skybox, R, rough_local * 5.0f).rgb;
 
    // We packed the amount of reflection in ambientLightColor.a
@@ -82,7 +77,6 @@ vec3 GetEnvironmentLighting(vec3 N, vec3 V)
    return reflection;
 }
 
-// Taken from pbr_shading.frag
 vec3 GetNormalMap()
 {
    // Sample normal map
@@ -97,9 +91,9 @@ vec3 GetNormalMap()
    vec3 N = normalize(worldNormal);
    vec3 B = normalize(cross(worldTangent, N)); // Orthogonal to both N and T
    vec3 T = cross(N, B); // Orthogonal to both N and B. Since N and B are normalized and orthogonal, T is already normalized
+   // invert the worldNormal for translucency on the backface. (AFTER calculating T)
    if(gl_FrontFacing){
-    // invert for translusency.
-		N *= -1.0f;
+        N *= -1.0f;
         //T *= -1.0f;
 	    //normalMap.z = -normalMap.z;
     }
@@ -143,10 +137,6 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float a)
    float NdotV = max(dot(N, V), 0.0);
    float NdotL = max(dot(N, L), 0.0);
 
-   // rough_local
-   //float ggx2  = GeometrySchlickGGX(NdotV, roughness);
-   //float ggx1  = GeometrySchlickGGX(NdotL, roughness);
-
    float ggx2  = GeometrySchlickGGX(NdotV, rough_local);
    float ggx1  = GeometrySchlickGGX(NdotL, rough_local);
 
@@ -158,7 +148,7 @@ vec3 GetCookTorranceSpecularLighting(vec3 N, vec3 L, vec3 V)
 {
    vec3 H = normalize(L + V);
 
-   // Remap alpha parameter to roughness^2
+   // Remap alpha parameter to rough_local^2
    float a = rough_local * rough_local;
 
    float D = DistributionGGX(N, H, a);
@@ -174,9 +164,8 @@ vec3 GetCookTorranceSpecularLighting(vec3 N, vec3 L, vec3 V)
 }
 
 
-// super-simple Labertian Diffuse.
+// NOTE: not lambertian diffuse, we apply the dot(N,L) elsewhere. We only return the color based on being reflected in multiple directions.
 vec3 GetLambertianDiffuse(vec3 texC){
-    //return dot(lightDir,normalMap);
     return texC / PI;
 }
 
@@ -205,10 +194,9 @@ float GetAttenuation(vec4 P)
 
 void main()
 {
-    
     // Variable declarations.
 	vec4 texColor = texture(texture_diffuse1, textureCoordinates); // albedo
-    // Alpha discarding - no need to do work on non-rendered fragments.
+    // Alpha discarding - no need to do work on non-rendered (transparent) fragments.
 	if(texColor.a < 0.5f ){
 		discard;
 	}
@@ -219,15 +207,14 @@ void main()
     vec3 L = normalize(lightPosition - (directional ? vec3(0.0f) : worldPos.xyz)); // light direction
 	vec3 V = normalize(camPosition - P.xyz);
     vec3 H = normalize(L + V);
-    vec3 F0 = vec3(0.028f); // Assumption that the leaf has the same fresnel as human skin.
+    vec3 F0 = vec3(0.028f); // Assumption that the leaf has the same base reflectance as human skin.
     vec3 F = FresnelSchlick(F0, max(dot(H, V), 0.0));
     // overwrite roughness uniform.
     rough_local = 1.0f - vec4(texture(texture_roughness1, textureCoordinates).rgb, 1.0f).r;
 
     //-----
     
-    vec3 diffuse = GetLambertianDiffuse(texColor.rgb);
-    
+    vec3 diffuse = GetLambertianDiffuse(texColor.rgb); // this is not diffuse lighting computed yet
     vec3 specular = GetCookTorranceSpecularLighting(N, L, V); //  does not have F apllied yet.
     vec3 ambient = GetAmbientLighting(texColor.rgb, N);
 
@@ -235,24 +222,32 @@ void main()
     vec3 lightRadiance = lightColor;
     float attenuation = directional ? 1.0f : GetAttenuation(P);
     lightRadiance *= attenuation;
-    lightRadiance *= max(dot(N, L), 0.0f);
+    lightRadiance *= max(dot(N, L), 0.0f); // computes the lambertian diffuse lighting, not coloring.
     vec3 FAmbient = FresnelSchlick(F0, max(dot(N, V), 0.0));
     vec3 indirectLight = mix(ambient, GetEnvironmentLighting(N,V), FAmbient);
     
 	//vec3 directLight = max(diffuse, 0) * texColor.rgb * lightColor;
     //vec3 transluscentLight = max(-diffuse,0) * (transluscencySample.rgb * 0.25f) * lightColor;
     
-	vec3 directLight = max(mix(diffuse, specular, F),0);
-    directLight *= lightRadiance;
+    /*
+    notSpecular = mix(diffuse, translucent, exp(-ec*thickness));
+    vec3 directLight = mix(notSpecular, specular, F);
+    */
+    
+
+	//vec3 directLight = max(mix(diffuse, specular, F),0);
+    //directLight *= lightRadiance;
 
     vec3 baseTranslucency = max(-dot(N,L), 0.0f) * texColor.rgb;
     float transSample = transluscencySample.r * 0.25f; // multiply by constant to reduce or increase saturation
     vec3 transluscentLight = baseTranslucency * transSample * lightColor;
-    //vec3(diffuseNeg.r * transSample, diffuseNeg.g * transSample, diffuseNeg.b * transSample )
+    
+    vec3 notSpecular = mix(diffuse, transluscentLight, exp(-epsilonC*(transSample * 10.0f)));
+    vec3 directLight = mix(notSpecular, specular, F);
+    directLight *= lightRadiance;
     // final frag coloring.
 	//FragColor = vec4((indirectLight + directLight) + transluscentLight, 1.0f);
     FragColor = vec4((indirectLight + directLight) + transluscentLight, 1.0f);
-
     // specular * lightRadiance
 }
 

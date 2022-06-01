@@ -143,6 +143,8 @@ void drawQuad();
 unsigned int loadTexture(string name);
 unsigned int loadTextureNoAlpha(string name);
 unsigned int loadTextureRED(string name);
+float epsilon;
+float c;
 // ==========
 
 int main()
@@ -275,6 +277,11 @@ int main()
         setAmbientUniforms(config.ambientLightColor * config.ambientLightIntensity);
         setLightUniforms(config.lights[0]);
         setShadowUniforms();
+
+        // @PHIJ - set epsilonC float to some constant,
+        // KEEP IN MIND: This is the result of Epsilon * C in Beers law.
+        shader->setFloat("epsilonC", epsilon * c);
+
         drawObjects();
         
         // Additional additive lights
@@ -299,15 +306,6 @@ int main()
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-    /* == OMITTED FROM PROJECT ==
-    delete carBodyModel;
-    delete carPaintModel;
-    delete carInteriorModel;
-    delete carLightModel;
-    delete carWindowsModel;
-    delete carWheelModel;
-    delete floorModel;
-    */
     delete phong_shading;
     delete pbr_shading;
     delete shadowMap_shader;
@@ -360,7 +358,7 @@ void drawGui(){
         ImGui::SliderFloat("metalness", &config.metalness, 0.0f, 1.0f);
         ImGui::Separator();
         */
-
+        
         ImGui::Text("Shading model: ");
         {
             if (ImGui::RadioButton("Blinn-Phong Shading", shader == phong_shading)) { shader = phong_shading; }
@@ -368,6 +366,13 @@ void drawGui(){
             if (ImGui::RadioButton("Leaf Shading", shader == leaf_shading)) { shader = leaf_shading; }
 
         }
+        ImGui::Separator();
+
+        ImGui::Text("Beer's Law constants");
+        ImGui::SliderFloat("Epsilon", &epsilon, 0.01f, 1.0f);
+        ImGui::SliderFloat("c-value", &c, 0.01f, 1.0f);
+        
+
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::End();
     }
