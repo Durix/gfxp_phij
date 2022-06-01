@@ -146,7 +146,8 @@ unsigned int loadTextureRED(string name);
 void GenerateOffsets();
 float epsilon = 0.2f;
 float c = 0.5f;
-//glm::vec2 offsets[100];
+float maxThickness = 10.0f;
+float minThickness = 0.0f;;
 glm::mat4 models[100];
 int instanceCount = 1;
 // ==========
@@ -290,6 +291,8 @@ int main()
         // @PHIJ - set epsilonC float to some constant,
         // KEEP IN MIND: This is the result of Epsilon * C in Beers law.
         shader->setFloat("epsilonC", epsilon * c);
+        shader->setFloat("minThickness", minThickness);
+        shader->setFloat("maxThickness", maxThickness);
 
         drawObjects();
         
@@ -354,7 +357,7 @@ void drawGui(){
         ImGui::SliderFloat("light 2 radius", &config.lights[1].radius, 0.01f, 50.0f);
         ImGui::SliderFloat("light 2 speed", &lightRotationSpeed, 0.0f, 2.0f);
         ImGui::Separator();
-        
+        /*
         ImGui::Text("Shading model: ");
         {
             if (ImGui::RadioButton("Blinn-Phong Shading", shader == phong_shading)) { shader = phong_shading; }
@@ -363,7 +366,7 @@ void drawGui(){
 
         }
         ImGui::Separator();
-
+        */
         ImGui::Text("Beer's Law constants");
         ImGui::SliderFloat("Epsilon", &epsilon, 0.01f, 1.0f);
         ImGui::SliderFloat("c-value", &c, 0.01f, 1.0f);
@@ -374,11 +377,10 @@ void drawGui(){
         ImGui::Separator();
 
 
-        ImGui::Text("Leaf Transform");
-        //ImGui::DragFloat3("Leaf Position", );
-        //ImGui::DragFloat3("Leaf Rotation", );
-        //ImGui::Separator();
-        
+        ImGui::Text("Thickness Variables");
+        ImGui::SliderFloat("Max", &maxThickness, 0.0f, 10.0f);
+        ImGui::SliderFloat("Min", &minThickness, 0.0f, 10.0f);
+        ImGui::Separator();
 
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::End();
@@ -850,7 +852,7 @@ void GenerateOffsets() {
         
     }   
     
-    // send array to uniform value in common_shading.vert
+    // send array to uniform in common_shading.vert
     shader->use(); // we can do this with any shader, seeing as they are all bound to the common_shading vertex shader.
     for (unsigned int i = 0; i < 100; i++)
     {

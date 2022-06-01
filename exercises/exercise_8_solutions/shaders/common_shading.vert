@@ -19,11 +19,6 @@ out vec2 textureCoordinates;
 // TODO 8.1 : Add an 'out' variable for vertex position in light space
 out vec4 lightPos;
 
-void SetPosition(vec4 computedPosition){
-    //vec2 local_offSet = offSets[gl_InstanceID];
-    //gl_Position = vec4(computedPosition.x + local_offSet.x, computedPosition.y + local_offSet.y, computedPosition.z, computedPosition.w);
-}
-
 
 void main() {
 
@@ -43,9 +38,5 @@ void main() {
 
    // final vertex position (for opengl rendering, not for lighting)
    gl_Position = viewProjection * worldPos;
-   
-    // --- for instancing, uncomment this.
-    //vec4 pos = viewProjection * vec4(vertex, 1.0f);
-    //SetPosition(pos);
 
 }

@@ -30,7 +30,9 @@ uniform sampler2D shadowMap;			// gl_tex6 - shadow map
 // @PHIJ -- 
 uniform sampler2D texture_translucency1;// gl_tex7 - translucency texture
 uniform sampler2D texture_roughness1;   // gl_tex8 - roughness texture
+
 uniform float epsilonC; // - A float of a computed constant value for beer's law.
+uniform float minThickness, maxThickness; // - unifron floats for thickness filtering.
 
 // 'in' variables to receive the interpolated Position and Normal from the vertex shader
 in vec4 worldPos;
@@ -94,8 +96,6 @@ vec3 GetNormalMap()
    // invert the worldNormal for translucency on the backface. (AFTER calculating T)
    if(gl_FrontFacing){
         N *= -1.0f;
-        //T *= -1.0f;
-	    //normalMap.z = -normalMap.z;
     }
    mat3 TBN = mat3(T, B, N);
 
@@ -213,29 +213,18 @@ void main()
     vec3 FAmbient = FresnelSchlick(F0, max(dot(N, V), 0.0));
     vec3 indirectLight = mix(ambient, GetEnvironmentLighting(N,V), FAmbient);
     
-	//vec3 directLight = max(diffuse, 0) * texColor.rgb * lightColor;
-    //vec3 transluscentLight = max(-diffuse,0) * (transluscencySample.rgb * 0.25f) * lightColor;
-    
-    /*
-    notSpecular = mix(diffuse, translucent, exp(-ec*thickness));
-    vec3 directLight = mix(notSpecular, specular, F);
-    */
-    
-
-	//vec3 directLight = max(mix(diffuse, specular, F),0);
-    //directLight *= lightRadiance;
-
     vec3 baseTranslucency = max(-dot(N,L), 0.0f) * texColor.rgb;
     float transSample = transluscencySample.r * 0.25f; // multiply by constant to reduce or increase saturation
     vec3 transluscentLight = baseTranslucency * transSample * lightColor;
     
-    vec3 notSpecular = mix(diffuse, transluscentLight, exp(-epsilonC*(1-transSample) * 10.0f));
+    float thickness = mix(maxThickness, minThickness, transSample);
+
+    vec3 notSpecular = mix(diffuse, transluscentLight, exp(-epsilonC*(thickness)));
+    
     vec3 directLight = mix(notSpecular, specular, F);
     directLight *= lightRadiance;
     // final frag coloring.
-	//FragColor = vec4((indirectLight + directLight) + transluscentLight, 1.0f);
-    
     FragColor = vec4((indirectLight + directLight), 1.0f);
-    // specular * lightRadiance
+
 }
 
