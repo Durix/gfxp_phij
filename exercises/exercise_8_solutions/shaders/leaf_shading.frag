@@ -97,6 +97,12 @@ vec3 GetNormalMap()
    vec3 N = normalize(worldNormal);
    vec3 B = normalize(cross(worldTangent, N)); // Orthogonal to both N and T
    vec3 T = cross(N, B); // Orthogonal to both N and B. Since N and B are normalized and orthogonal, T is already normalized
+   if(gl_FrontFacing){
+    // invert for translusency.
+		N *= -1.0f;
+        //T *= -1.0f;
+	    //normalMap.z = -normalMap.z;
+    }
    mat3 TBN = mat3(T, B, N);
 
    // Transform normal map from tangent space to world space
@@ -169,8 +175,9 @@ vec3 GetCookTorranceSpecularLighting(vec3 N, vec3 L, vec3 V)
 
 
 // super-simple Labertian Diffuse.
-float GetLambertianDiffuse(vec3 lightDir, vec3 normalMap){
-    return dot(lightDir,normalMap);
+vec3 GetLambertianDiffuse(vec3 texC){
+    //return dot(lightDir,normalMap);
+    return texC / PI;
 }
 
 /*
@@ -212,20 +219,15 @@ void main()
     vec3 L = normalize(lightPosition - (directional ? vec3(0.0f) : worldPos.xyz)); // light direction
 	vec3 V = normalize(camPosition - P.xyz);
     vec3 H = normalize(L + V);
-    vec3 F0 = vec3(0.04f);
+    vec3 F0 = vec3(0.028f); // Assumption that the leaf has the same fresnel as human skin.
     vec3 F = FresnelSchlick(F0, max(dot(H, V), 0.0));
     // overwrite roughness uniform.
-    rough_local = vec4(texture(texture_roughness1, textureCoordinates).rgb, 1.0f).r;
+    rough_local = 1.0f - vec4(texture(texture_roughness1, textureCoordinates).rgb, 1.0f).r;
 
     //-----
-
-    vec3 diffuse = GetLambertianDiffuse(L, N) * texColor.rgb;
-    if(gl_FrontFacing){
-    // invert for translusency.
-		diffuse = -diffuse;
-		//N *= -1.0f;
-		//T *= -1.0f;
-	}
+    
+    vec3 diffuse = GetLambertianDiffuse(texColor.rgb);
+    
     vec3 specular = GetCookTorranceSpecularLighting(N, L, V); //  does not have F apllied yet.
     vec3 ambient = GetAmbientLighting(texColor.rgb, N);
 
@@ -233,9 +235,9 @@ void main()
     vec3 lightRadiance = lightColor;
     float attenuation = directional ? 1.0f : GetAttenuation(P);
     lightRadiance *= attenuation;
-    lightRadiance *= max(dot(N, L), 0.0);
+    lightRadiance *= max(dot(N, L), 0.0f);
     vec3 FAmbient = FresnelSchlick(F0, max(dot(N, V), 0.0));
-    vec3 indirectLight = mix(GetAmbientLighting(texColor.rgb,N), GetEnvironmentLighting(N,V), FAmbient);
+    vec3 indirectLight = mix(ambient, GetEnvironmentLighting(N,V), FAmbient);
     
 	//vec3 directLight = max(diffuse, 0) * texColor.rgb * lightColor;
     //vec3 transluscentLight = max(-diffuse,0) * (transluscencySample.rgb * 0.25f) * lightColor;
@@ -243,11 +245,14 @@ void main()
 	vec3 directLight = max(mix(diffuse, specular, F),0);
     directLight *= lightRadiance;
 
-    vec3 diffuseNeg = max(-diffuse, 0);
+    vec3 baseTranslucency = max(-dot(N,L), 0.0f) * texColor.rgb;
     float transSample = transluscencySample.r * 0.25f; // multiply by constant to reduce or increase saturation
-    vec3 transluscentLight = vec3(diffuseNeg.r * transSample, diffuseNeg.g * transSample, diffuseNeg.b * transSample ) * lightColor;
-    
+    vec3 transluscentLight = baseTranslucency * transSample * lightColor;
+    //vec3(diffuseNeg.r * transSample, diffuseNeg.g * transSample, diffuseNeg.b * transSample )
     // final frag coloring.
-	FragColor = vec4((indirectLight + directLight) + transluscentLight, 1.0f);
+	//FragColor = vec4((indirectLight + directLight) + transluscentLight, 1.0f);
+    FragColor = vec4((indirectLight + directLight) + transluscentLight, 1.0f);
+
+    // specular * lightRadiance
 }
 

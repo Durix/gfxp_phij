@@ -165,7 +165,7 @@ vec3 GetEnvironmentLighting(vec3 N, vec3 V)
 
    // We packed the amount of reflection in ambientLightColor.a
    // Only apply reflection (and ambient) during the first light pass
-   reflection *= ambientLightColor.a; 
+   reflection *= ambientLightColor.a;
 
    return reflection;
 }
@@ -252,7 +252,7 @@ void main()
 
    // Modulate the radiance with the angle of incidence
    lightRadiance *= max(dot(N, L), 0.0);
-
+   
    // We use a fixed value of 0.04f for F0. The range in dielectrics is usually in the range (0.02, 0.05)
    vec3 F0 = vec3(0.04f);
 
