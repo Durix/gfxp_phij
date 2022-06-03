@@ -10,14 +10,14 @@ uniform vec3 lightColor;
 uniform float lightRadius;
 
 // material properties
-uniform vec3 reflectionColor; // not needed?
-uniform float roughness; // - overwritten by roughness texture sample per fragment.
-uniform float metalness; // not needed?
+uniform vec3 reflectionColor;           // not needed
+uniform float roughness;                // - overwritten by roughness texture sample per fragment. (local_rough)
+uniform float metalness;                // not needed
 // legacy uniforms, not needed for PBR
-uniform float ambientReflectance;
-uniform float diffuseReflectance;
-uniform float specularReflectance;		//unused??
-uniform float specularExponent;			//unused?
+uniform float ambientReflectance;       //unused
+uniform float diffuseReflectance;       //unused
+uniform float specularReflectance;		//unused
+uniform float specularExponent;			//unused
 
 // material textures
 uniform sampler2D texture_diffuse1;		// gl_tex1 - albedo coloring
@@ -40,7 +40,6 @@ in vec3 worldNormal;
 in vec3 worldTangent;
 in vec2 textureCoordinates;
 
-//in vec4 lightPos;
 
 const float PI = 3.14159265359;
 float rough_local; // replaced all uses of roughness uniform with roughness texture sampling.
@@ -50,10 +49,7 @@ vec3 GetAmbientLighting(vec3 albedo, vec3 normal)
 
    vec3 ambient = textureLod(skybox, normal, 5.0f).rgb;
 
-   // Scale the light by the albedo, considering also that it gets reflected equally in all directions
    ambient *= albedo / PI;
-
-   // Only apply ambient during the first light pass
    ambient *= ambientLightColor.a; 
 
    // Ambient occlusion
@@ -69,12 +65,8 @@ vec3 GetEnvironmentLighting(vec3 N, vec3 V)
    vec3 R = reflect(-V, N);
 
    // Sample cubemap
-   // HACK: We sample a different mipmap depending on the roughness. Rougher surface will have blurry reflection
    vec3 reflection = textureLod(skybox, R, rough_local * 5.0f).rgb;
-
-   // We packed the amount of reflection in ambientLightColor.a
-   // Only apply reflection (and ambient) during the first light pass
-   reflection *= ambientLightColor.a; 
+    reflection *= ambientLightColor.a; 
 
    return reflection;
 }
@@ -209,22 +201,25 @@ void main()
     vec3 lightRadiance = lightColor;
     float attenuation = directional ? 1.0f : GetAttenuation(P);
     lightRadiance *= attenuation;
-    lightRadiance *= dot(N, L); // computes the lambertian diffuse lighting, not coloring.
+    lightRadiance *= dot(N, L);
     vec3 FAmbient = FresnelSchlick(F0, max(dot(N, V), 0.0));
     vec3 indirectLight = mix(ambient, GetEnvironmentLighting(N,V), FAmbient);
     
-    vec3 baseTranslucency = GetLambertianDiffuse(texColor.rgb);
+
     float transSample = transluscencySample.r;
-    vec3 transluscentLight = baseTranslucency;
+    vec3 transluscentLight = GetLambertianDiffuse(texColor.rgb);
     
     float thickness = mix(maxThickness, minThickness, transSample);
+    
+    // front and back-face radiance
     vec3 frontRadiance = max(lightRadiance, 0.0f);
     vec3 backRadiance = max(-lightRadiance, 0.0f);
 
+    // lighting interpolation
     vec3 notSpecular = mix(diffuse * frontRadiance, transluscentLight * backRadiance, exp(-epsilonC*(thickness)));
-    
     vec3 directLight = mix(notSpecular, specular * frontRadiance, F);
-    //directLight *= lightRadiance;
+
+
     // final frag coloring.
     FragColor = vec4((indirectLight + directLight), 1.0f);
 

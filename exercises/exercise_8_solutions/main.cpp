@@ -4,9 +4,6 @@
 
 #include <vector>
 
-// NEW! as our scene gets more complex, we start using more helper classes
-//  I recommend that you read through the camera.h and model.h files to see if you can map the the previous
-//  lessons to this implementation
 #include "shader.h"
 #include "camera.h"
 #include "model.h"
@@ -37,6 +34,7 @@ Shader* phong_shading;
 Shader* pbr_shading;
 // @PHIJ
 Shader* leaf_shading;
+//-------
 Shader* shadowMap_shader;
 Model* carBodyModel;
 Model* carPaintModel;
@@ -51,7 +49,7 @@ GLuint carLightTexture;
 GLuint carWindowsTexture;
 GLuint carWheelTexture;
 GLuint floorTexture;
-//@phij
+// @phij
 unsigned int leaf_texture;
 unsigned int leaf_texture_normal;
 unsigned int leaf_texture_translusency;
@@ -100,10 +98,10 @@ struct Config
         //lights.emplace_back(position, color, intensity, radius);
 
         // light 1
-        lights.emplace_back(glm::vec3(-1.0f, 1.0f, -0.5f), glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.0f);
+        lights.emplace_back(glm::vec3(-1.0f, 1.0f, -0.5f), glm::vec3(1.0f, 1.0f, 1.0f), 30.0f, 0.0f);
 
         // light 2
-        lights.emplace_back(glm::vec3( 1.0f, 1.5f, 0.0f), glm::vec3(0.7f, 0.2f, 1.0f), 1.0f, 10.0f);
+        lights.emplace_back(glm::vec3( 1.0f, 1.5f, 0.0f), glm::vec3(0.7f, 0.2f, 1.0f), 0.0f, 10.0f);
     }
 
     // ambient light
@@ -144,10 +142,10 @@ unsigned int loadTexture(string name);
 unsigned int loadTextureNoAlpha(string name);
 unsigned int loadTextureRED(string name);
 void GenerateOffsets();
-float epsilon = 0.2f;
-float c = 0.5f;
-float maxThickness = 10.0f;
-float minThickness = 0.0f;;
+float epsilon = 1.0f;
+float c = 1.0f;
+float maxThickness = 5.0f;
+float minThickness = 0.1f;;
 glm::mat4 models[100];
 int instanceCount = 1;
 // ==========
@@ -204,15 +202,7 @@ int main()
     leaf_texture_normal = loadTexture("leaf05_normal.png");
     leaf_texture_translusency = loadTextureRED("leaf05_translucency.png");
     leaf_texture_roughness = loadTextureNoAlpha("leaf05_roughnessR.png");
-    /* == OMITTED FROM PROJECT ==
-    carBodyModel = new Model("car/Body_LOD0.obj");
-    carPaintModel = new Model("car/Paint_LOD0.obj");
-    carInteriorModel = new Model("car/Interior_LOD0.obj");
-    carLightModel = new Model("car/Light_LOD0.obj");
-    carWindowsModel = new Model("car/Windows_LOD0.obj");
-    carWheelModel = new Model("car/Wheel_LOD0.obj");
-    floorModel = new Model("floor/floor.obj");
-    */
+
     // init skybox
     vector<std::string> faces
     {
@@ -357,16 +347,7 @@ void drawGui(){
         ImGui::SliderFloat("light 2 radius", &config.lights[1].radius, 0.01f, 50.0f);
         ImGui::SliderFloat("light 2 speed", &lightRotationSpeed, 0.0f, 2.0f);
         ImGui::Separator();
-        /*
-        ImGui::Text("Shading model: ");
-        {
-            if (ImGui::RadioButton("Blinn-Phong Shading", shader == phong_shading)) { shader = phong_shading; }
-            if (ImGui::RadioButton("PBR Shading", shader == pbr_shading)) { shader = pbr_shading; }
-            if (ImGui::RadioButton("Leaf Shading", shader == leaf_shading)) { shader = leaf_shading; }
 
-        }
-        ImGui::Separator();
-        */
         ImGui::Text("Beer's Law constants");
         ImGui::SliderFloat("Epsilon", &epsilon, 0.01f, 1.0f);
         ImGui::SliderFloat("c-value", &c, 0.01f, 1.0f);
@@ -378,8 +359,8 @@ void drawGui(){
         
         
         ImGui::Text("Thickness Variables");
-        ImGui::SliderFloat("Max", &maxThickness, 0.0f, 10.0f);
-        ImGui::SliderFloat("Min", &minThickness, 0.0f, 10.0f);
+        ImGui::SliderFloat("Max", &maxThickness, 0.01f, 10.0f);
+        ImGui::SliderFloat("Min", &minThickness, 0.01f, 10.0f);
         ImGui::Separator();
 
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
@@ -533,7 +514,7 @@ void drawQuad()
 {
     // Vertex Array/buffer Object identification init
     static unsigned int quadVAO = 0, quadVBO;
-    if (quadVAO == 0) { // <-- this avoid memory leaks. Not sure why... presumably it is to ensure that the vertex arrays are only generated once, and kept in the buffer for future use.
+    if (quadVAO == 0) { // ensures that the vertex arrays are only generated once, and kept in the buffer for future use.
 
         // Setup positions and Texture Coordiantes (Packed as 3 verticies, and 2 texture coords. strips of 5)
         float quadVerticies[] = {
