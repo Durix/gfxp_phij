@@ -839,15 +839,21 @@ void GenerateOffsets() {
         
         glm::mat4 baseMatrix = glm::mat4(1.0);
         // - translate to place in world
-
+        // -- places leafs in a wall - did try a cloud implementation but since layering isn't implemented, the effect is somewhat jarring
+        //float r = static_cast <float> (rand() / static_cast <float> (RAND_MAX / 10.0f));
         baseMatrix = glm::translate(baseMatrix, glm::vec3(i % 10, (int)i / 10, 0.0));
 
         // - rotate by a random float value. (RAND_MAX/6.28 is to randomize radians. 6.28 = full circle)
-        float r = static_cast <float> (rand() / static_cast <float> (RAND_MAX/6.28f));
-        baseMatrix = glm::rotate(baseMatrix, r , glm::vec3(0.0f, 0.0f, 1.0f));
         
+        float rx = static_cast <float> (rand() / static_cast <float> (RAND_MAX / 6.28f));
+        float ry = static_cast <float> (rand() / static_cast <float> (RAND_MAX / 6.28f));
+        float rz = static_cast <float> (rand() / static_cast <float> (RAND_MAX / 6.28f));
+        baseMatrix = glm::rotate(baseMatrix, rz , glm::vec3(0.0f, 0.0f, 1.0f));
+        baseMatrix = glm::rotate(baseMatrix, ry, glm::vec3(0.0f, 1.0f, 0.0f));
+        baseMatrix = glm::rotate(baseMatrix, rx, glm::vec3(1.0f, 0.0f, 0.0f));
+
         // - scale up and or down. 
-        r = rLow + static_cast <float> (rand() / static_cast <float> (RAND_MAX/(rHigh - rLow)));
+        float r = rLow + static_cast <float> (rand() / static_cast <float> (RAND_MAX/(rHigh - rLow)));
         baseMatrix = glm::scale(baseMatrix, glm::vec3(r, r, 1.0));
         models[index++] = baseMatrix;
         
