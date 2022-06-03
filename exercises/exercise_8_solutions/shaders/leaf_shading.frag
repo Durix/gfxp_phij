@@ -93,7 +93,7 @@ vec3 GetNormalMap()
    vec3 N = normalize(worldNormal);
    vec3 B = normalize(cross(worldTangent, N)); // Orthogonal to both N and T
    vec3 T = cross(N, B); // Orthogonal to both N and B. Since N and B are normalized and orthogonal, T is already normalized
-   // invert the worldNormal for translucency on the backface. (AFTER calculating T)
+   // invert the worldNormal for both-side rednering. (AFTER calculating T)
    if(gl_FrontFacing){
         N *= -1.0f;
     }
@@ -209,20 +209,22 @@ void main()
     vec3 lightRadiance = lightColor;
     float attenuation = directional ? 1.0f : GetAttenuation(P);
     lightRadiance *= attenuation;
-    lightRadiance *= max(dot(N, L), 0.0f); // computes the lambertian diffuse lighting, not coloring.
+    lightRadiance *= dot(N, L); // computes the lambertian diffuse lighting, not coloring.
     vec3 FAmbient = FresnelSchlick(F0, max(dot(N, V), 0.0));
     vec3 indirectLight = mix(ambient, GetEnvironmentLighting(N,V), FAmbient);
     
-    vec3 baseTranslucency = max(-dot(N,L), 0.0f) * texColor.rgb;
-    float transSample = transluscencySample.r * 0.25f; // multiply by constant to reduce or increase saturation
-    vec3 transluscentLight = baseTranslucency * transSample * lightColor;
+    vec3 baseTranslucency = GetLambertianDiffuse(texColor.rgb);
+    float transSample = transluscencySample.r;
+    vec3 transluscentLight = baseTranslucency;
     
     float thickness = mix(maxThickness, minThickness, transSample);
+    vec3 frontRadiance = max(lightRadiance, 0.0f);
+    vec3 backRadiance = max(-lightRadiance, 0.0f);
 
-    vec3 notSpecular = mix(diffuse, transluscentLight, exp(-epsilonC*(thickness)));
+    vec3 notSpecular = mix(diffuse * frontRadiance, transluscentLight * backRadiance, exp(-epsilonC*(thickness)));
     
-    vec3 directLight = mix(notSpecular, specular, F);
-    directLight *= lightRadiance;
+    vec3 directLight = mix(notSpecular, specular * frontRadiance, F);
+    //directLight *= lightRadiance;
     // final frag coloring.
     FragColor = vec4((indirectLight + directLight), 1.0f);
 

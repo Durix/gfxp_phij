@@ -347,13 +347,13 @@ void drawGui(){
         ImGui::Text("Light 1: ");
         ImGui::DragFloat3("light 1 direction", (float*)&config.lights[0].position, .1f, -20, 20);
         ImGui::ColorEdit3("light 1 color", (float*)&config.lights[0].color);
-        ImGui::SliderFloat("light 1 intensity", &config.lights[0].intensity, 0.0f, 10.0f);
+        ImGui::SliderFloat("light 1 intensity", &config.lights[0].intensity, 0.0f, 50.0f);
         ImGui::Separator();
 
         ImGui::Text("Light 2: ");
         ImGui::DragFloat3("light 2 position", (float*)&config.lights[1].position, .1f, -20, 20);
         ImGui::ColorEdit3("light 2 color", (float*)&config.lights[1].color);
-        ImGui::SliderFloat("light 2 intensity", &config.lights[1].intensity, 0.0f, 10.0f);
+        ImGui::SliderFloat("light 2 intensity", &config.lights[1].intensity, 0.0f, 50.0f);
         ImGui::SliderFloat("light 2 radius", &config.lights[1].radius, 0.01f, 50.0f);
         ImGui::SliderFloat("light 2 speed", &lightRotationSpeed, 0.0f, 2.0f);
         ImGui::Separator();
@@ -371,12 +371,12 @@ void drawGui(){
         ImGui::SliderFloat("Epsilon", &epsilon, 0.01f, 1.0f);
         ImGui::SliderFloat("c-value", &c, 0.01f, 1.0f);
         ImGui::Separator();
-
+        
         ImGui::Text("Instancing");
         ImGui::SliderInt("instance Count", &instanceCount, 1, 100);
         ImGui::Separator();
-
-
+        
+        
         ImGui::Text("Thickness Variables");
         ImGui::SliderFloat("Max", &maxThickness, 0.0f, 10.0f);
         ImGui::SliderFloat("Min", &minThickness, 0.0f, 10.0f);
@@ -538,10 +538,10 @@ void drawQuad()
         // Setup positions and Texture Coordiantes (Packed as 3 verticies, and 2 texture coords. strips of 5)
         float quadVerticies[] = {
                 //pos   pos   pos | txtC  txtC | norm norm norm |  tangent (3) 
-                -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
-                -1.0f,  1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
-                1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
-                1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f
+                -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, -0.25f, -0.25f, 1.0f, 1.0f, 0.0f, 0.0f,
+                -1.0f,  1.0f, 0.0f, 0.0f, 1.0f, -0.25f, 0.25f, 1.0f, 1.0f, 0.0f, 0.0f,
+                1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.25f, -0.25f, 1.0f, 1.0f, 0.0f, 0.0f,
+                1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 0.25f, 0.25f, 1.0f, 1.0f, 0.0f, 0.0f
         };
         
         // Setup Plane Vertex Array Object
@@ -839,6 +839,7 @@ void GenerateOffsets() {
         
         glm::mat4 baseMatrix = glm::mat4(1.0);
         // - translate to place in world
+
         baseMatrix = glm::translate(baseMatrix, glm::vec3(i % 10, (int)i / 10, 0.0));
 
         // - rotate by a random float value. (RAND_MAX/6.28 is to randomize radians. 6.28 = full circle)
